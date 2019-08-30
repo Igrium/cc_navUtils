@@ -5,7 +5,7 @@ useGPS = true
 
 -- The tutle's current coordinates. May be in world space or custom space depending on setup.
 local coordinates = vector.new(0,0,0)
-local facing = "north"
+local direction = "north"
 
 -- Is this turtle successfully able to use GPS?
 hasGPS = false
@@ -38,7 +38,7 @@ function getCoordinates()
 end
 
 function getDirection()
-	return facing
+	return direction
 end
 
 function isInitialized()
@@ -86,7 +86,7 @@ end
 function saveCoordFile()
 	local file = fs.open("localCoords", 'w')
 	file.writeLine("coordinates = vector.new("..coordinates.x..','..coordinates.y..','..coordinates.z..')')
-	file.writeLine("facing = '"..facing.."'")
+	file.writeLine("direction = '"..direction.."'")
 	file.close()
 end
 
@@ -99,7 +99,38 @@ function loadCoordFile()
 		return false
 	end
 	coordinates = localCoords.coordinates
-	facing = localCoords.facing
+	direction = localCoords.direction
 	os.unloadAPI("localCoords")
 	return true
+end
+
+--- Change the coordinates by amount in direction of turtle
+-- @param (number) num Amount to change
+function incrementCoords(num)
+	if direction == "north" then
+		coordinates.z = coordinates.z - num
+	elseif direction == "south" then
+		coordinates.z = coordinates.z + num
+	elseif direction == "west" then
+		coordinates.x = coordinates.x - num
+	elseif direction == "east" then
+		coordinates.x = coordinates.x + num
+	else
+		print("Unknown direction: "..tostring(direction))
+	end
+	saveCoordFile()
+end
+--- Move the turtle forward  block
+-- @return Success
+function forward()
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+	
+	if turtle.forward() then
+		incrementCoords(1)
+		return true
+	end
+	return false
 end
