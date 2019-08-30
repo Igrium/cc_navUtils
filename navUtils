@@ -1,0 +1,105 @@
+-- Api to help with turtle navigation consistancy between reloads
+
+-- Should this turtle attempt to use GPS?
+useGPS = true
+
+-- The tutle's current coordinates. May be in world space or custom space depending on setup.
+local coordinates = vector.new(0,0,0)
+local facing = "north"
+
+-- Is this turtle successfully able to use GPS?
+hasGPS = false
+
+
+-- Is the navigation initialized?
+local initialized = false
+
+--- Initialize the turtle's navigation system. Required for proper navigation.
+-- @return Success
+function init()
+	-- Attempt GPS callibration
+	local gpsSuccess = false
+	if useGPS and callibrateGPS() then
+		hasGPS = true
+		initialized = true
+		return true
+	elseif loadCoordFile() then
+		hasGPS = false
+		initialized = true
+		return true
+	else
+		hasGPS = false
+		return false
+	end
+end
+
+function getCoordinates()
+	return coordinates
+end
+
+function getDirection()
+	return facing
+end
+
+function isInitialized()
+	return initialized
+end
+
+--- Attempt to use GPS to callibrate the turtle's location and rotation
+-- @return Success
+function callibrateGPS()
+	if gps.locate(1) == nil then
+		return false
+	end	
+	
+	coordinates = vector.new(gps.locate(5))
+	local success = false
+	
+	-- Callibrate rotation
+	while not success do
+		success = turtle.forward()
+		if not success then
+			turtle.turnRight()
+		end
+	end
+	
+	local newLocation = vector.new(gps.locate(5))
+	
+	if newLocation['z'] < coordinates['z'] then
+		direction = "north"
+	elseif newLocation['z'] > coordinates['z'] then
+		direction = "south"
+	elseif newLocation['x'] < coordinates['x'] then
+		direction = "west"
+	elseif newLocation['x'] > coordinates['x'] then
+		direction = "east"
+	else
+		print("Unable to callibrate rotation")
+		return false
+	end
+	
+	turtle.back()
+	return true
+end
+
+--- Save current coordinates and rotation into internal file
+function saveCoordFile()
+	local file = fs.open("localCoords", 'w')
+	file.writeLine("coordinates = vector.new("..coordinates.x..','..coordinates.y..','..coordinates.z..')')
+	file.writeLine("facing = '"..facing.."'")
+	file.close()
+end
+
+--- Load and save the values from internal file into memory
+-- @return Success
+
+function loadCoordFile()
+	if not os.loadAPI("localCoords") then
+		System.out.println("Please supply an internal coordinate file!")
+		return false
+	end
+	coordinates = localCoords.coordinates
+	facing = localCoords.facing
+	os.unloadAPI("localCoords")
+	return true
+end
