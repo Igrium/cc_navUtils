@@ -153,8 +153,8 @@ function back()
 		return false
 	end
 	
-	if turtle.forward() then
-		incrementCoords(1)
+	if turtle.back() then
+		incrementCoords(-1)
 		return true
 	end
 	return false
@@ -163,6 +163,11 @@ end
 --- Move the turtle up 1 block
 -- @return success
 function up()
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+
 	if turtle.up() then
 		if hasGPS then
 			coordinates = vector.new(gps.locate(1))
@@ -177,6 +182,11 @@ end
 --- Move the turtle down 1 block
 -- @return success
 function down()
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+	
 	if turtle.down() then
 		if hasGPS then
 			coordinates = vector.new(gps.locate(1))
@@ -268,7 +278,122 @@ function faceDirection(newDirection)
 	direction = newDirection
 end
 
+--- Go to a particular x coordinate (may change rotation)
+-- @param (number) targetX X coordinate to go
+-- @param (boolean) allowBreak Allow block breaking
+-- @return success
+function goToX(targetX, allowBreak)
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+	
+	-- Face correct direction
+	if coordinates.x == targetX then
+		return true
+	elseif coordinates.x > targetX then
+		faceDirection('west')
+	elseif coordinates.x < targetX then
+		faceDirection('east')
+	end
+	
+	while coordinates.x ~= targetX do
+		-- Attempt to go forward. If we can't and are allowed to, break a block.
+		if not forward() then
+			-- We still might not be able to move (ex. out of fuel)
+			if allowBreak then
+				turtle.dig()
+				if not forward() then return false end
+			else return false end
+		end
+	end
+	
+	return true
+end
 
+--- Go to a particular z coordinate (may change rotation)
+-- @param (number) targetZ Z coordinate to go
+-- @param (boolean) allowBreak Allow block breaking
+-- @return success
+function goToZ(targetZ, allowBreak)
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+	
+	-- Face correct direction
+	if coordinates.z == targetZ then
+		return true
+	elseif coordinates.z > targetZ then
+		faceDirection('north')
+	elseif coordinates.z < targetZ then
+		faceDirection('south')
+	end
+	
+	while coordinates.z ~= targetZ do
+		-- Attempt to go forward. If we can't and are allowed to, break a block.
+		if not forward() then
+			-- We still might not be able to move (ex. out of fuel)
+			if allowBreak then
+				turtle.dig()
+				if not forward() then return false end
+			else return false end
+		end
+	end
+	
+	return true
+end
+
+--- Go to a particular y coordinate
+-- @param (number) targetY Y coordinate to go
+-- @param (boolean) allowBreak Allow block breaking
+-- @return success
+function goToY(targetY, allowBreak)
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+	
+	-- Face correct direction
+	if coordinates.y == targetY then
+		return true
+	
+	-- Go up
+	elseif coordinates.y < targetY then
+		while coordinates.y ~= targetY do
+			-- Attempt to go up. If we can't and are allowed to, break a block.
+			if not up() then
+				-- We still might not be able to move (ex. out of fuel)
+				if allowBreak then
+					turtle.digUp()
+					if not up() then return false end
+				else return false end
+			end
+		end
+		
+	-- Go down
+	elseif coordinates.y > targetY then
+		while coordinates.y ~= targetY do
+			-- Attempt to go down. If we can't and are allowed to, break a block.
+			if not down() then
+				-- We still might not be able to move (ex. out of fuel)
+				if allowBreak then
+					turtle.digDown()
+					if not down() then return false end
+				else return false end
+			end
+		end
+	end
+	
+	return true
+end
+
+--- Go to a set of coordinates (may change rotation
+-- @param (vector) coords Coordinates to go to
+-- @param (boolean) allowBreak Allow block breaking
+function goToCoords(coords, allowBreak)
+	return (goToX(coords.x, allowBreak) and goToZ(coords.z, allowBreak) and goToY(coords.y, allowBreak))
+end
 -- INTERNAL FUNCTIONS
 
 -- Locate an item in a table
