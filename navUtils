@@ -160,6 +160,34 @@ function back()
 	return false
 end
 
+--- Move the turtle up 1 block
+-- @return success
+function up()
+	if turtle.up() then
+		if hasGPS then
+			coordinates = vector.new(gps.locate(1))
+		else
+			coordinates.y = coordinates.y + 1
+		end
+		saveCoordFile()
+		return true
+	else return false end
+end
+
+--- Move the turtle down 1 block
+-- @return success
+function down()
+	if turtle.down() then
+		if hasGPS then
+			coordinates = vector.new(gps.locate(1))
+		else
+			coordinates.y = coordinates.y - 1
+		end
+		saveCoordFile()
+		return true
+	else return false end
+end
+
 --- Turn the turtle left
 -- @return Success
 function turnLeft()
@@ -239,7 +267,6 @@ function faceDirection(newDirection)
 	
 	direction = newDirection
 end
-
 
 
 -- INTERNAL FUNCTIONS
