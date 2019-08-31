@@ -5,6 +5,8 @@ useGPS = true
 
 -- The tutle's current coordinates. May be in world space or custom space depending on setup.
 local coordinates = vector.new(0,0,0)
+
+directions = {"north", "east", "south", "west"}
 local direction = "north"
 
 -- Is this turtle successfully able to use GPS?
@@ -22,6 +24,7 @@ function init()
 	if useGPS and callibrateGPS() then
 		hasGPS = true
 		initialized = true
+		saveCoordFile()
 		return true
 	elseif loadCoordFile() then
 		hasGPS = false
@@ -43,6 +46,10 @@ end
 
 function isInitialized()
 	return initialized
+end
+
+function isGPS()
+	return hasGPS
 end
 
 --- Attempt to use GPS to callibrate the turtle's location and rotation
@@ -107,7 +114,9 @@ end
 --- Change the coordinates by amount in direction of turtle
 -- @param (number) num Amount to change
 function incrementCoords(num)
-	if direction == "north" then
+	if hasGPS then
+		coordinates = vector.new(gps.locate(1))
+	elseif direction == "north" then
 		coordinates.z = coordinates.z - num
 	elseif direction == "south" then
 		coordinates.z = coordinates.z + num
@@ -120,7 +129,8 @@ function incrementCoords(num)
 	end
 	saveCoordFile()
 end
---- Move the turtle forward  block
+
+--- Move the turtle forward 1 block
 -- @return Success
 function forward()
 	if not isInitialized() then
@@ -133,4 +143,122 @@ function forward()
 		return true
 	end
 	return false
+end
+
+--- Move the turtle back 1 block
+-- @return Success
+function back()
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+	
+	if turtle.forward() then
+		incrementCoords(1)
+		return true
+	end
+	return false
+end
+
+--- Turn the turtle left
+-- @return Success
+function turnLeft()
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+
+	if turtle.turnLeft() then
+		-- Handle specific west-north scenareo
+		if direction == "north" then
+			direction = "west"
+		else
+			direction = directions[getIndexOfValue(directions, direction) - 1]
+		end
+		saveCoordFile()
+		return true
+	else return false end
+end
+
+--- Turn the turtle right
+-- @return Success
+function turnRight()
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+
+	if turtle.turnRight() then
+		-- Handle specific west-north scenareo
+		if direction == "west" then
+			direction = "north"
+		else
+			direction = directions[getIndexOfValue(directions, direction) + 1]
+		end
+		saveCoordFile()
+		return true
+	else return false end
+end
+
+--- Face a particular direction
+-- @param (string) Direction to face
+function faceDirection(newDirection)
+	if not isInitialized() then
+		error("Navigation system is not initialized!")
+		return false
+	end
+	
+	-- Check direction is valid
+	if not tableContains(directions, direction) then
+		error(newDirection.." is not a valid direction.")
+		return
+	end
+	if direction == newDirection then
+		return
+	end
+	
+	-- Find how far we have to turn
+	local distance = math.abs(getIndexOfValue(directions,direction) - getIndexOfValue(directions, newDirection))
+	
+	-- Handle specific west-north scenareo
+	if direction == "north" and newDirection == "west" then
+		turtle.turnLeft()
+	elseif direction == "west" and newDirection == "north" then
+		turtle.turnRight()
+	
+	-- if the new direction is conterclockwize of the current one, turn left
+	elseif getIndexOfValue(directions, newDirection) < getIndexOfValue(directions, direction) then
+		for i=1,distance,1 do
+			turtle.turnLeft()
+		end
+	elseif getIndexOfValue(directions, newDirection) > getIndexOfValue(directions, direction) then
+		for i=1,distance,1 do
+			turtle.turnRight()
+		end
+	end
+	
+	direction = newDirection
+end
+
+
+
+-- INTERNAL FUNCTIONS
+
+-- Locate an item in a table
+function getIndexOfValue(tab, val)
+	local index={}
+	for k,v in pairs(tab) do
+		index[v]=k
+	end
+	return index[val]
+end
+
+-- Check if a table has a value
+function tableContains(tab, val)
+    for index, value in ipairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+    return false
 end
