@@ -102,7 +102,7 @@ end
 
 function loadCoordFile()
 	if not os.loadAPI("localCoords") then
-		System.out.println("Please supply an internal coordinate file!")
+		print("Please supply an internal coordinate file!")
 		return false
 	end
 	coordinates = localCoords.coordinates
